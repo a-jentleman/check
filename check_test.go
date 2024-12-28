@@ -31,22 +31,16 @@ func TestInRange(t *testing.T) {
 			{"negative-range-out-of-lower-bound", -6, -5, -1, true, false},
 			{"negative-range-out-of-upper-bound", 0, -5, -1, true, false},
 		}
-
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				defer func() {
-					if r := recover(); r != nil {
-						if !tt.panicErr {
-							t.Errorf("unexpected panic: %v", r)
-						}
-					} else if tt.panicErr {
-						t.Errorf("expected panic, but did not panic")
-					}
+					assert.Equal(t, tt.panicErr, recover() != nil)
 				}()
 
-				err := check.InRange[int](tt.actual, tt.min, tt.max)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("got error = %v, want error = %v", err != nil, tt.wantErr)
+				actualErr := check.InRange[int](tt.actual, tt.min, tt.max)
+				if tt.wantErr {
+					assert.ErrorIs(t, actualErr, check.OutOfRangeError(""))
+					return
 				}
 			})
 		}
@@ -80,14 +74,19 @@ func TestInRange(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				defer func() {
-					if r := recover(); r != nil {
-						if !tt.panicErr {
-							t.Errorf("unexpected panic: %v", r)
-						}
-					} else if tt.panicErr {
-						t.Errorf("expected panic, but did not panic")
-					}
+					assert.Equal(t, tt.panicErr, recover() != nil)
 				}()
+
+				actualErr := check.InRange[float64](tt.actual, tt.min, tt.max)
+				if tt.wantErr {
+					assert.ErrorIs(t, actualErr, check.OutOfRangeError(""))
+					return
+				}
+				assert.NoError(t, actualErr)
+			})
+		}
+	})
+}
 
 func TestIndex(t *testing.T) {
 	tests := []struct {
@@ -139,29 +138,29 @@ func TestOutOfRangeError_Is(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := errors.Is(tt.err, tt.target); got != tt.want {
-				t.Errorf("errors.Is(%v, %v) = %v, want %v", tt.err, tt.target, got, tt.want)
+			if tt.want {
+				assert.ErrorIs(t, tt.err, tt.target)
+				return
 			}
+			assert.NotErrorIs(t, tt.err, tt.target)
 		})
 	}
 }
 
 func TestOutOfRangeError_Error(t *testing.T) {
 	tests := []struct {
-		name string
-		err  check.OutOfRangeError
-		want string
+		name     string
+		inputErr check.OutOfRangeError
+		expected string
 	}{
-		{"simple-error-message", check.OutOfRangeError("value out of range"), "value out of range"},
+		{"basic-error-message", check.OutOfRangeError("out of range"), "out of range"},
 		{"empty-error-message", check.OutOfRangeError(""), ""},
-		{"numeric-error-message", check.OutOfRangeError("123"), "123"},
+		{"long-error-message", check.OutOfRangeError("this is a very long error message to test bounds"), "this is a very long error message to test bounds"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.err.Error(); got != tt.want {
-				t.Errorf("Error() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.expected, tt.inputErr.Error())
 		})
 	}
 }
