@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/a-jentleman/check"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInRange(t *testing.T) {
@@ -88,13 +89,32 @@ func TestInRange(t *testing.T) {
 					}
 				}()
 
-				err := check.InRange[float64](tt.actual, tt.min, tt.max)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("got error = %v, want error = %v", err != nil, tt.wantErr)
-				}
-			})
-		}
-	})
+func TestIndex(t *testing.T) {
+	tests := []struct {
+		name    string
+		index   int
+		slice   []int
+		wantErr bool
+	}{
+		{"valid-index", 2, []int{1, 2, 3}, false},
+		{"index-0-valid", 0, []int{1, 2, 3}, false},
+		{"index-out-of-range-upper", 3, []int{1, 2, 3}, true},
+		{"index-out-of-range-lower", -1, []int{1, 2, 3}, true},
+		{"index-at-upper-bound-valid", 2, []int{1, 2, 3}, false},
+		{"empty-slice", 0, []int{}, true},
+		{"index-out-of-range-empty-slice", 1, []int{}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := check.Index(tt.index, tt.slice)
+			if tt.wantErr {
+				assert.ErrorIs(t, actual, check.OutOfRangeError(""))
+				return
+			}
+			assert.NoError(t, actual)
+		})
+	}
 }
 
 type NotOutOfRangeError string

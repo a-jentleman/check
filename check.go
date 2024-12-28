@@ -34,3 +34,12 @@ func InRange[T cmp.Ordered](actual, min, max T) error {
 		return nil
 	}
 }
+
+// Index returns an [OutOfRangeError] if !(0 <= index < len(slice)).
+func Index[I ~int, T any, S ~[]T](index I, slice S) error {
+	l := len(slice)
+	if l == 0 {
+		return OutOfRangeError(fmt.Sprintf("out-of-range (expected 0 <= actual < %v, but actual=%v)", l, index))
+	}
+	return InRange(int(index), 0, l-1)
+}
